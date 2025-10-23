@@ -24,24 +24,25 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
 
   const screenOptions = {
-    tabBarActiveTintColor: colors.primary,
-    tabBarInactiveTintColor: colors.gray,
+    tabBarActiveTintColor: "#007AFF", // Bright blue for active state
+    tabBarInactiveTintColor: "#8E8E93", // Light gray for inactive
     headerShown: false,
     tabBarStyle: {
-      backgroundColor: colors.background,
-      borderTopColor: colors.border,
+      backgroundColor: "#FFFFFF", // Pure white background
+      borderTopColor: "#E5E5EA", // Very light border
       borderTopWidth: 1,
       height: Platform.OS === "ios" ? 85 : 65,
       paddingBottom: Platform.OS === "ios" ? 25 : 8,
       paddingTop: 8,
+      // Soft shadow for subtle elevation
       shadowColor: "#000",
       shadowOffset: {
         width: 0,
         height: -2,
       },
-      shadowOpacity: 0.05,
-      shadowRadius: 4,
-      elevation: 8,
+      shadowOpacity: 0.08,
+      shadowRadius: 6,
+      elevation: 6,
     },
     tabBarLabelStyle: {
       fontSize: 11,
@@ -125,6 +126,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   iconContainerFocused: {
-    backgroundColor: "rgba(0, 122, 255, 0.1)",
+    backgroundColor: "rgba(0, 122, 255, 0.1)", // Light blue background for focused state
   },
 });
