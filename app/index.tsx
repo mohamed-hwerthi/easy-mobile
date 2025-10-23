@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Animated,
@@ -21,6 +22,16 @@ export default function StoreScanScreen() {
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress] = useState(new Animated.Value(0));
   const [pulseAnim] = useState(new Animated.Value(1));
+  const [scanned, setScanned] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
+  const [cameraActive, setCameraActive] = useState(true);
+
+  // Request camera permission on mount
+  useEffect(() => {
+    if (permission && !permission.granted) {
+      requestPermission();
+    }
+  }, [permission]);
 
   // Pulsing animation for the scan button
   React.useEffect(() => {
@@ -46,32 +57,103 @@ export default function StoreScanScreen() {
     }
   }, [isScanning]);
 
-  const handleScanQR = () => {
-    setIsScanning(true);
+  const handleBarCodeScanned = (scanningResult: any) => {
+    if (!scanned) {
+      setScanned(true);
+      setIsScanning(false);
+      setCameraActive(false);
 
-    // Simulate scanning animation
+      // Console log the scanned value in real-time
+      console.log("📱 QR Code Scanned at:", new Date().toLocaleTimeString());
+      console.log("🔍 Scanned Data:", scanningResult.data);
+      console.log("📊 Scan Type:", scanningResult.type);
+      console.log(
+        "📋 Full Scan Result:",
+        JSON.stringify(scanningResult, null, 2)
+      );
+
+      Alert.alert(
+        "🎉 Store Connected!",
+        `Store: ${scanningResult.data}\n\nYou can now browse their amazing products.`,
+        [
+          {
+            text: "Scan Again",
+            onPress: () => {
+              setScanned(false);
+              setCameraActive(true);
+              console.log("🔄 Ready to scan again");
+            },
+          },
+          {
+            text: "Start Shopping",
+            onPress: () => {
+              console.log(
+                "🚀 Navigating to store with data:",
+                scanningResult.data
+              );
+              router.push("/(tabs)");
+            },
+          },
+        ]
+      );
+    }
+  };
+
+  const handleScanQR = () => {
+    if (!permission?.granted) {
+      Alert.alert(
+        "Camera Permission Required",
+        "Please allow camera access to scan QR codes",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Allow Camera",
+            onPress: requestPermission,
+          },
+        ]
+      );
+      return;
+    }
+
+    setIsScanning(true);
+    setScanned(false);
+    setCameraActive(true);
+
+    // Simulate scanning animation (fallback if camera not available)
     Animated.timing(scanProgress, {
       toValue: 1,
       duration: 2000,
       easing: Easing.inOut(Easing.ease),
       useNativeDriver: false,
     }).start(() => {
-      // After scan completion
-      setIsScanning(false);
-      scanProgress.setValue(0);
-
-      // Simulate successful scan and navigate to store
-      Alert.alert(
-        "🎉 Store Connected!",
-        "Welcome to TechGadget Store. You can now browse their amazing products.",
-        [
-          {
-            text: "Start Shopping",
-            onPress: () => router.push("/(tabs)"),
-          },
-        ]
-      );
+      if (!permission?.granted || !cameraActive) {
+        // Fallback to simulated scan if camera not available
+        setIsScanning(false);
+        simulateQRScan();
+      }
     });
+  };
+
+  const simulateQRScan = () => {
+    const simulatedData = "store://techgadget-12345";
+    console.log("🧪 Simulated QR Scan:", simulatedData);
+
+    Alert.alert(
+      "🎉 Store Connected!",
+      "Welcome to TechGadget Store. You can now browse their amazing products.",
+      [
+        {
+          text: "Start Shopping",
+          onPress: () => {
+            console.log("🚀 Navigating with simulated data:", simulatedData);
+            router.push("/(tabs)");
+          },
+        },
+      ]
+    );
   };
 
   const handleManualEntry = () => {
@@ -87,13 +169,17 @@ export default function StoreScanScreen() {
           text: "Connect Store",
           onPress: (code: any) => {
             if (code && code.length === 6) {
+              console.log("⌨️ Manual entry code:", code);
               Alert.alert(
                 "🎉 Store Connected!",
                 "Welcome to TechGadget Store. You can now browse their amazing products.",
                 [
                   {
                     text: "Start Shopping",
-                    onPress: () => router.push("/(tabs)"),
+                    onPress: () => {
+                      console.log("🚀 Navigating with manual code:", code);
+                      router.push("/(tabs)");
+                    },
                   },
                 ]
               );
@@ -158,44 +244,83 @@ export default function StoreScanScreen() {
               end={{ x: 1, y: 1 }}
             >
               <View style={styles.scannerFrame}>
-                {/* Animated Scanning Line */}
-                {isScanning && (
-                  <Animated.View
-                    style={[styles.scanningLine, { top: progressWidth }]}
-                  />
+                {/* Real Camera View */}
+                {permission?.granted && cameraActive ? (
+                  <CameraView
+                    style={styles.camera}
+                    facing="back"
+                    onBarcodeScanned={
+                      scanned ? undefined : handleBarCodeScanned
+                    }
+                    barcodeScannerSettings={{
+                      barcodeTypes: ["qr", "pdf417"],
+                    }}
+                  >
+                    <View style={styles.cameraOverlay}>
+                      {/* Animated Scanning Line */}
+                      {isScanning && (
+                        <Animated.View
+                          style={[styles.scanningLine, { top: progressWidth }]}
+                        />
+                      )}
+
+                      {/* Animated Dots */}
+                      <View style={styles.dotsContainer}>
+                        {[0, 1, 2, 3].map((dot) => (
+                          <Animated.View
+                            key={dot}
+                            style={[
+                              styles.animatedDot,
+                              {
+                                transform: [
+                                  {
+                                    scale: scanProgress.interpolate({
+                                      inputRange: [0, 0.25 * dot, 1],
+                                      outputRange: [1, 1.5, 1],
+                                    }),
+                                  },
+                                ],
+                                opacity: scanProgress.interpolate({
+                                  inputRange: [0, 0.25 * dot, 1],
+                                  outputRange: [0.3, 1, 0.3],
+                                }),
+                              },
+                            ]}
+                          />
+                        ))}
+                      </View>
+
+                      {/* Corner Borders */}
+                      <View style={[styles.corner, styles.cornerTopLeft]} />
+                      <View style={[styles.corner, styles.cornerTopRight]} />
+                      <View style={[styles.corner, styles.cornerBottomLeft]} />
+                      <View style={[styles.corner, styles.cornerBottomRight]} />
+                    </View>
+                  </CameraView>
+                ) : (
+                  // Fallback view when camera is not available
+                  <View style={styles.cameraFallback}>
+                    <Ionicons name="camera-outline" size={50} color="#007AFF" />
+                    <Text style={styles.cameraFallbackText}>
+                      {permission?.granted
+                        ? "Camera Ready"
+                        : "Camera Access Required"}
+                    </Text>
+
+                    {/* Animated Scanning Line */}
+                    {isScanning && (
+                      <Animated.View
+                        style={[styles.scanningLine, { top: progressWidth }]}
+                      />
+                    )}
+
+                    {/* Corner Borders */}
+                    <View style={[styles.corner, styles.cornerTopLeft]} />
+                    <View style={[styles.corner, styles.cornerTopRight]} />
+                    <View style={[styles.corner, styles.cornerBottomLeft]} />
+                    <View style={[styles.corner, styles.cornerBottomRight]} />
+                  </View>
                 )}
-
-                {/* Animated Dots */}
-                <View style={styles.dotsContainer}>
-                  {[0, 1, 2, 3].map((dot) => (
-                    <Animated.View
-                      key={dot}
-                      style={[
-                        styles.animatedDot,
-                        {
-                          transform: [
-                            {
-                              scale: scanProgress.interpolate({
-                                inputRange: [0, 0.25 * dot, 1],
-                                outputRange: [1, 1.5, 1],
-                              }),
-                            },
-                          ],
-                          opacity: scanProgress.interpolate({
-                            inputRange: [0, 0.25 * dot, 1],
-                            outputRange: [0.3, 1, 0.3],
-                          }),
-                        },
-                      ]}
-                    />
-                  ))}
-                </View>
-
-                {/* Corner Borders */}
-                <View style={[styles.corner, styles.cornerTopLeft]} />
-                <View style={[styles.corner, styles.cornerTopRight]} />
-                <View style={[styles.corner, styles.cornerBottomLeft]} />
-                <View style={[styles.corner, styles.cornerBottomRight]} />
               </View>
             </LinearGradient>
           </Animated.View>
@@ -203,8 +328,28 @@ export default function StoreScanScreen() {
           <Text style={styles.scannerText}>
             {isScanning
               ? "🔍 Scanning store code..."
-              : "📱 Position QR code within frame"}
+              : permission?.granted
+              ? "📱 Position QR code within frame"
+              : "📱 Allow camera access to scan"}
           </Text>
+        </View>
+
+        {/* Manual Entry Option */}
+        <TouchableOpacity
+          style={styles.manualButton}
+          onPress={handleManualEntry}
+        >
+          <Ionicons name="keypad" size={20} color="#007AFF" />
+          <Text style={styles.manualButtonText}>Enter Store Code Manually</Text>
+        </TouchableOpacity>
+
+        {/* Demo Option */}
+        <View style={styles.demoSection}>
+          <Text style={styles.demoText}>Don't have a QR code?</Text>
+          <TouchableOpacity style={styles.demoButton} onPress={simulateQRScan}>
+            <Ionicons name="play-circle" size={16} color="#666" />
+            <Text style={styles.demoButtonText}>Try demo scan</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -282,6 +427,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 22,
     maxWidth: 300,
+    marginBottom: 120,
   },
   content: {
     flex: 1,
@@ -316,6 +462,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     overflow: "hidden",
     position: "relative",
+  },
+  camera: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 20,
+  },
+  cameraOverlay: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+  },
+  cameraFallback: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 122, 255, 0.1)",
+    borderRadius: 20,
+    position: "relative",
+  },
+  cameraFallbackText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#007AFF",
+    fontWeight: "500",
+    textAlign: "center",
   },
   scanningLine: {
     position: "absolute",
@@ -382,76 +556,42 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "500",
   },
-  storePreview: {
-    width: "100%",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  storeCard: {
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.05)",
-  },
-  storeHeader: {
+  manualButton: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 12,
-  },
-  storeImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 12,
-  },
-  storeBadge: {
-    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#007AFF",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: "#007AFF",
+    marginBottom: 20,
+    backgroundColor: "rgba(0, 122, 255, 0.05)",
   },
-  storeBadgeText: {
-    color: "#fff",
-    fontSize: 10,
+  manualButtonText: {
+    color: "#007AFF",
+    fontSize: 16,
     fontWeight: "600",
-    marginLeft: 4,
+    marginLeft: 8,
   },
-  storeInfo: {
-    flex: 1,
+  demoSection: {
+    alignItems: "center",
   },
-  storeName: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#1a1a1a",
-    marginBottom: 6,
-  },
-  storeDescription: {
-    fontSize: 14,
+  demoText: {
     color: "#666",
-    lineHeight: 18,
-    marginBottom: 12,
+    fontSize: 14,
+    marginBottom: 8,
   },
-  storeStats: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  stat: {
+  demoButton: {
     flexDirection: "row",
     alignItems: "center",
   },
-  statText: {
-    fontSize: 12,
+  demoButtonText: {
     color: "#666",
-    marginLeft: 4,
+    fontSize: 14,
     fontWeight: "500",
+    marginLeft: 4,
+    textDecorationLine: "underline",
   },
   bottomSection: {
     padding: 24,
@@ -486,41 +626,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     marginLeft: 8,
-  },
-  manualButton: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 16,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: "#007AFF",
-    marginBottom: 20,
-    backgroundColor: "rgba(0, 122, 255, 0.05)",
-  },
-  manualButtonText: {
-    color: "#007AFF",
-    fontSize: 16,
-    fontWeight: "600",
-    marginLeft: 8,
-  },
-  demoSection: {
-    alignItems: "center",
-  },
-  demoText: {
-    color: "#666",
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  demoButton: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  demoButtonText: {
-    color: "#666",
-    fontSize: 14,
-    fontWeight: "500",
-    marginLeft: 4,
-    textDecorationLine: "underline",
   },
 });
