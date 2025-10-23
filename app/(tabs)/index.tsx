@@ -31,13 +31,23 @@ type Category = {
   isActive: boolean;
 };
 
+type Store = {
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+  rating: number;
+  category: string;
+  distance: string;
+};
+
 // Mock data
 const featuredProducts: Product[] = [
   {
     id: "1",
     name: "Wireless Earbuds",
     price: 99.99,
-    image: "https://via.placeholder.com/150",
+    image: "https://images.unsplash.com/photo-1590658165737-15a047b8b5e3?w=300",
     rating: 4.5,
     reviews: 128,
     isFavorite: false,
@@ -46,7 +56,7 @@ const featuredProducts: Product[] = [
     id: "2",
     name: "Smart Watch",
     price: 199.99,
-    image: "https://via.placeholder.com/150",
+    image: "https://images.unsplash.com/photo-1579586337278-3f426f2e5c98?w=300",
     rating: 4.7,
     reviews: 256,
     isFavorite: true,
@@ -55,7 +65,7 @@ const featuredProducts: Product[] = [
     id: "3",
     name: "Bluetooth Speaker",
     price: 79.99,
-    image: "https://via.placeholder.com/150",
+    image: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300",
     rating: 4.3,
     reviews: 89,
     isFavorite: false,
@@ -74,11 +84,12 @@ export default function HomeScreen() {
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState("1");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showStoreModal, setShowStoreModal] = useState(false);
 
   const renderProductItem: ListRenderItem<Product> = ({ item }) => (
     <TouchableOpacity
       style={styles.productCard}
-      onPress={() => router.push(`/product/${item.id}` as any)}
+      onPress={() => router.push(`/product/${item.id}`)}
       activeOpacity={0.8}
     >
       <TouchableOpacity style={styles.favoriteButton} onPress={() => {}}>
@@ -131,6 +142,16 @@ export default function HomeScreen() {
     </TouchableOpacity>
   );
 
+  const handleStartAnnuler = () => {
+    setShowStoreModal(false);
+    // Navigate back to store scan screen
+    router.push("/");
+  };
+
+  const handleChangeStore = () => {
+    setShowStoreModal(true);
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -148,17 +169,12 @@ export default function HomeScreen() {
             <Ionicons name="options-outline" size={20} color="#666" />
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.cartButton}>
-          <Ionicons name="cart-outline" size={24} color="#000" />
-          <View style={styles.cartBadge}>
-            <Text style={styles.cartBadgeText}>2</Text>
-          </View>
-        </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Categories */}
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Categories</Text>
           <FlatList
             data={categories}
             renderItem={renderCategoryItem}
@@ -166,24 +182,6 @@ export default function HomeScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoriesList}
-          />
-        </View>
-
-        {/* Featured Products */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Featured Products</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAll}>See All</Text>
-            </TouchableOpacity>
-          </View>
-          <FlatList
-            data={featuredProducts}
-            renderItem={renderProductItem}
-            keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.productsList}
           />
         </View>
 
@@ -214,22 +212,37 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
     padding: 16,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
   },
+  storeSelector: {
+    marginBottom: 12,
+  },
+  storeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    alignSelf: "flex-start",
+  },
+  storeButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#007AFF",
+    marginHorizontal: 6,
+    maxWidth: 200,
+  },
   searchBar: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#f5f5f5",
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginRight: 12,
+    paddingVertical: 10,
   },
   searchInput: {
     flex: 1,
@@ -240,39 +253,56 @@ const styles = StyleSheet.create({
   filterButton: {
     padding: 4,
   },
-  cartButton: {
-    position: "relative",
-    padding: 4,
-  },
-  cartBadge: {
-    position: "absolute",
-    right: 0,
-    top: 0,
-    backgroundColor: "#ff3b30",
-    borderRadius: 10,
-    width: 18,
-    height: 18,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cartBadgeText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "bold",
-  },
   content: {
     flex: 1,
   },
+  welcomeBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    margin: 16,
+    padding: 20,
+    borderRadius: 16,
+  },
+  welcomeText: {
+    flex: 1,
+  },
+  welcomeTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 4,
+  },
+
   section: {
     padding: 16,
     backgroundColor: "#fff",
-    marginBottom: 8,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#000",
+  },
+  seeAll: {
+    color: "#007AFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  categoriesList: {
+    paddingBottom: 8,
   },
   categoryItem: {
     width: 80,
     alignItems: "center",
-    marginRight: 16,
-    paddingVertical: 8,
+    marginRight: 12,
+    paddingVertical: 10,
     borderRadius: 20,
     backgroundColor: "#f5f5f5",
   },
@@ -284,6 +314,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#666",
     marginTop: 4,
+    fontWeight: "500",
   },
   categoryNameActive: {
     color: "#007AFF",
@@ -303,29 +334,29 @@ const styles = StyleSheet.create({
   },
   productCard: {
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 12,
     marginRight: 12,
     width: 160,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   favoriteButton: {
     position: "absolute",
     top: 12,
     right: 12,
     zIndex: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderRadius: 12,
     padding: 4,
   },
   productImage: {
     width: "100%",
     height: 120,
-    borderRadius: 8,
+    borderRadius: 12,
     marginBottom: 8,
     backgroundColor: "#f5f5f5",
   },
@@ -338,10 +369,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
     marginLeft: 4,
+    fontWeight: "500",
   },
   productName: {
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: "600",
     marginBottom: 8,
     color: "#333",
   },
@@ -357,38 +389,120 @@ const styles = StyleSheet.create({
   },
   addToCartButton: {
     backgroundColor: "#007AFF",
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
   },
-  sectionHeader: {
+  // Modal Styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
   },
-  sectionTitle: {
-    fontSize: 18,
+  modalTitle: {
+    fontSize: 20,
     fontWeight: "bold",
     color: "#000",
   },
-  seeAll: {
-    color: "#007AFF",
+  closeButton: {
+    padding: 4,
+  },
+  storesList: {
+    padding: 16,
+  },
+  storeItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  storeItemActive: {
+    borderColor: "#007AFF",
+    backgroundColor: "#e6f2ff",
+  },
+  storeImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    marginRight: 12,
+  },
+  storeInfo: {
+    flex: 1,
+  },
+  storeName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#000",
+    marginBottom: 4,
+  },
+  storeDescription: {
     fontSize: 14,
+    color: "#666",
+    marginBottom: 6,
   },
-  categoriesList: {
-    paddingBottom: 8,
+  storeDetails: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
-  shopNowButton: {
-    backgroundColor: "#6c5ce7",
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
+  storeCategory: {
+    fontSize: 12,
+    color: "#007AFF",
+    backgroundColor: "rgba(0, 122, 255, 0.1)",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    fontWeight: "500",
   },
-  shopNowText: {
+  storeDistance: {
+    fontSize: 12,
+    color: "#666",
+    fontWeight: "500",
+  },
+  modalActions: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
+    gap: 12,
+  },
+  startAnnulerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#FF3B30",
+    backgroundColor: "rgba(255, 59, 48, 0.05)",
+  },
+  startAnnulerText: {
+    color: "#FF3B30",
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
+  confirmButton: {
+    backgroundColor: "#007AFF",
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  confirmButtonText: {
     color: "#fff",
+    fontSize: 16,
     fontWeight: "600",
   },
 });

@@ -123,7 +123,7 @@ export default function ProductDetailsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Simple Header - Matching Cart Screen Style */}
+      {/* Header with back button */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -148,8 +148,7 @@ export default function ProductDetailsScreen() {
           </TouchableOpacity>
         </View>
       </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* Product Images */}
         <View style={styles.imageSection}>
           <View style={styles.imageContainer}>
@@ -354,11 +353,6 @@ export default function ProductDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  // Header styles matching Cart Screen
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -368,13 +362,17 @@ const styles = StyleSheet.create({
     borderBottomColor: "#f0f0f0",
   },
   backButton: {
-    padding: 4,
+    padding: 8,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#000",
+    fontWeight: "600",
   },
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  // Header styles matching Cart Scree
   headerActions: {
     flexDirection: "row",
     alignItems: "center",

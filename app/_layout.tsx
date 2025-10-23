@@ -7,32 +7,41 @@ import {
 import { Stack } from "expo-router";
 import React from "react";
 import { useColorScheme } from "react-native";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { CartProvider } from "../context/CartContext";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <SafeAreaProvider>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <CartProvider>
-          <SafeAreaView style={{ flex: 1 }}>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                headerShadowVisible: false,
+    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+      <CartProvider>
+        <SafeAreaView style={{ flex: 1 }}>
+          <Stack screenOptions={{ headerShown: false }}>
+            {/* Store Scan Screen - First Screen */}
+            <Stack.Screen name="index" />
+
+            {/* Main Tabs */}
+            <Stack.Screen name="(tabs)" />
+
+            {/* Product Details */}
+            <Stack.Screen name="product/[id]" />
+
+            {/* Checkout Screen */}
+            <Stack.Screen name="checkout" />
+
+            {/* Modal */}
+            <Stack.Screen
+              name="modal"
+              options={{
+                presentation: "modal",
+                title: "Modal",
+                headerShown: true, // Show header for modal if needed
               }}
-            >
-              <Stack.Screen />
-              <Stack.Screen
-                name="modal"
-                options={{ presentation: "modal", title: "Modal" }}
-              />
-            </Stack>
-          </SafeAreaView>
-        </CartProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+            />
+          </Stack>
+        </SafeAreaView>
+      </CartProvider>
+    </ThemeProvider>
   );
 }
