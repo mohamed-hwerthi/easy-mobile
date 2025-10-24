@@ -1,10 +1,17 @@
+import { API_UPLOADS_URL } from "@/config/api.config";
+import { ClientCategory } from "@/models/client-category-model";
+import { ClientProduct } from "@/models/client-product-detail-model";
+import { clientCategoryService } from "@/services/client-category-service";
+import { clientProductService } from "@/services/client-product-service";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   Image,
   ListRenderItem,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,118 +20,167 @@ import {
   View,
 } from "react-native";
 
-// Types
-type Product = {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-  rating: number;
-  reviews: number;
-  isFavorite: boolean;
+const CATEGORY_ICONS: { [key: string]: string } = {
+  electronics: "phone-portrait-outline",
+  clothing: "shirt-outline",
+  food: "fast-food-outline",
+  books: "book-outline",
+  sports: "basketball-outline",
+  beauty: "sparkles-outline",
+  home: "home-outline",
+  default: "grid-outline",
 };
-
-type Category = {
-  id: string;
-  name: string;
-  icon: string;
-  isActive: boolean;
-};
-
-type Store = {
-  id: string;
-  name: string;
-  description: string;
-  image: string;
-  rating: number;
-  category: string;
-  distance: string;
-};
-
-// Mock data
-const featuredProducts: Product[] = [
-  {
-    id: "1",
-    name: "Wireless Earbuds",
-    price: 99.99,
-    image: "https://images.unsplash.com/photo-1590658165737-15a047b8b5e3?w=300",
-    rating: 4.5,
-    reviews: 128,
-    isFavorite: false,
-  },
-  {
-    id: "2",
-    name: "Smart Watch",
-    price: 199.99,
-    image: "https://images.unsplash.com/photo-1579586337278-3f426f2e5c98?w=300",
-    rating: 4.7,
-    reviews: 256,
-    isFavorite: true,
-  },
-  {
-    id: "3",
-    name: "Bluetooth Speaker",
-    price: 79.99,
-    image: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300",
-    rating: 4.3,
-    reviews: 89,
-    isFavorite: false,
-  },
-];
-
-const categories: Category[] = [
-  { id: "1", name: "All", icon: "grid-outline", isActive: true },
-  { id: "2", name: "Headphones", icon: "headset-outline", isActive: false },
-  { id: "3", name: "Watches", icon: "watch-outline", isActive: false },
-  { id: "4", name: "Phones", icon: "phone-portrait-outline", isActive: false },
-  { id: "5", name: "Laptops", icon: "laptop-outline", isActive: false },
-];
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [activeCategory, setActiveCategory] = useState("1");
+  const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [showStoreModal, setShowStoreModal] = useState(false);
+  const [products, setProducts] = useState<ClientProduct[]>([]);
+  const [categories, setCategories] = useState<ClientCategory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const renderProductItem: ListRenderItem<Product> = ({ item }) => (
+  useEffect(() => {
+    loadData();
+  }, [activeCategory, searchQuery]);
+
+  useEffect(() => {
+    loadData();
+  }, [activeCategory, searchQuery]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const categoriesData = await clientCategoryService.getAll();
+      console.log(categoriesData);
+      const categoriesWithIcons = categoriesData.map((cat) => ({
+        ...cat,
+        icon:
+          cat.icon ||
+          CATEGORY_ICONS[cat.name.toLowerCase()] ||
+          CATEGORY_ICONS.default,
+      }));
+
+      const allCategories: ClientCategory[] = [
+        { id: "all", name: "All", icon: "grid-outline" },
+        ...categoriesWithIcons,
+      ];
+
+      setCategories(allCategories);
+      const params: any = {
+        page: 0,
+        limit: 20,
+      };
+
+      if (searchQuery) {
+        params.query = searchQuery;
+      }
+
+      if (activeCategory !== "all") {
+        params.categoryFilter = activeCategory;
+      }
+
+      const productsResponse = await clientProductService.getAll(params);
+      console.log(productsResponse);
+      setProducts(productsResponse.items || productsResponse.items || []);
+    } catch (error) {
+      debugger;
+      console.error("Error loading data:", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadData();
+  };
+
+  const handleSearch = (text: string) => {
+    setSearchQuery(text);
+  };
+
+  const handleCategoryChange = (categoryId: string) => {
+    setActiveCategory(categoryId);
+  };
+
+  const toggleFavorite = async (productId: string) => {
+    console.log("Toggle favorite for product:", productId);
+  };
+
+  const renderProductItem: ListRenderItem<ClientProduct> = ({ item }) => (
     <TouchableOpacity
       style={styles.productCard}
       onPress={() => router.push(`/product/${item.id}`)}
       activeOpacity={0.8}
     >
-      <TouchableOpacity style={styles.favoriteButton} onPress={() => {}}>
-        <Ionicons
-          name={item.isFavorite ? "heart" : "heart-outline"}
-          size={20}
-          color={item.isFavorite ? "#FF3B30" : "#000"}
-        />
+      <TouchableOpacity
+        style={styles.favoriteButton}
+        onPress={() => toggleFavorite(item.id)}
+      >
+        <Ionicons name={"heart-outline"} size={20} color={"#000"} />
       </TouchableOpacity>
-      <Image source={{ uri: item.image }} style={styles.productImage} />
+
+      {item.mediasUrls && item.mediasUrls.length > 0 ? (
+        <Image
+          source={{ uri: API_UPLOADS_URL + item.mediasUrls[0] }}
+          style={styles.productImage}
+        />
+      ) : (
+        <View style={[styles.productImage, styles.placeholderImage]}>
+          <Ionicons name="image-outline" size={32} color="#ccc" />
+        </View>
+      )}
+
       <View style={styles.ratingContainer}>
         <Ionicons name="star" size={14} color="#FFD700" />
         <Text style={styles.ratingText}>
-          {item.rating} ({item.reviews})
+          {item.averageRating || 0} ({item.reviewCount || 0})
         </Text>
       </View>
-      <Text style={styles.productName} numberOfLines={1}>
-        {item.name}
+
+      <Text style={styles.productName} numberOfLines={2}>
+        {item.title}
       </Text>
+
       <View style={styles.priceContainer}>
-        <Text style={styles.productPrice}>${item.price.toFixed(2)}</Text>
+        <View>
+          {item.discountedPrice ? (
+            <>
+              <Text style={styles.discountedPrice}>
+                ${item.discountedPrice.toFixed(2)}
+              </Text>
+              <Text style={styles.originalPrice}>
+                ${item.basePrice.toFixed(2)}
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.productPrice}>
+              ${item.basePrice.toFixed(2)}
+            </Text>
+          )}
+        </View>
         <TouchableOpacity style={styles.addToCartButton}>
           <Ionicons name="add" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
+
+      {!item.inStock && (
+        <View style={styles.outOfStockBadge}>
+          <Text style={styles.outOfStockText}>Out of Stock</Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 
-  const renderCategoryItem: ListRenderItem<Category> = ({ item }) => (
+  const renderCategoryItem: ListRenderItem<ClientCategory> = ({ item }) => (
     <TouchableOpacity
       style={[
         styles.categoryItem,
         activeCategory === item.id && styles.categoryItemActive,
       ]}
-      onPress={() => setActiveCategory(item.id)}
+      onPress={() => handleCategoryChange(item.id)}
     >
       <Ionicons
         name={item.icon as any}
@@ -136,25 +192,24 @@ export default function HomeScreen() {
           styles.categoryName,
           activeCategory === item.id && styles.categoryNameActive,
         ]}
+        numberOfLines={1}
       >
         {item.name}
       </Text>
     </TouchableOpacity>
   );
 
-  const handleStartAnnuler = () => {
-    setShowStoreModal(false);
-    // Navigate back to store scan screen
-    router.push("/");
-  };
-
-  const handleChangeStore = () => {
-    setShowStoreModal(true);
-  };
+  if (loading && !refreshing) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading products...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.searchBar}>
           <Ionicons name="search" size={20} color="#666" />
@@ -162,8 +217,9 @@ export default function HomeScreen() {
             style={styles.searchInput}
             placeholder="Search products..."
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={handleSearch}
             placeholderTextColor="#999"
+            returnKeyType="search"
           />
           <TouchableOpacity style={styles.filterButton}>
             <Ionicons name="options-outline" size={20} color="#666" />
@@ -171,7 +227,13 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* Categories */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Categories</Text>
@@ -185,21 +247,40 @@ export default function HomeScreen() {
           />
         </View>
 
-        {/* All Products Grid */}
+        {/* Products Grid */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>All Products</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAll}>See All</Text>
-            </TouchableOpacity>
+            <Text style={styles.sectionTitle}>
+              {activeCategory === "all"
+                ? "All Products"
+                : categories.find((cat) => cat.id === activeCategory)?.name +
+                  " Products"}
+            </Text>
+            <Text style={styles.productCount}>{products.length} products</Text>
           </View>
-          <View style={styles.productsGrid}>
-            {[...featuredProducts, ...featuredProducts].map((item, index) => (
-              <View key={`${item.id}-${index}`} style={styles.productGridItem}>
-                {renderProductItem({ item, index, separators: {} as any })}
-              </View>
-            ))}
-          </View>
+
+          {products.length === 0 ? (
+            <View style={styles.noProductsContainer}>
+              <Ionicons name="search-outline" size={48} color="#ccc" />
+              <Text style={styles.noProductsText}>No products found</Text>
+              <Text style={styles.noProductsSubtext}>
+                {searchQuery
+                  ? "Try adjusting your search"
+                  : "No products available in this category"}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.productsGrid}>
+              {products.map((item, index) => (
+                <View
+                  key={`${item.id}-${index}`}
+                  style={styles.productGridItem}
+                >
+                  {renderProductItem({ item, index, separators: {} as any })}
+                </View>
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -504,5 +585,96 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#666",
+  },
+  noStoreContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    padding: 32,
+  },
+  noStoreText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+    marginTop: 16,
+  },
+  noStoreSubtext: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  scanStoreButton: {
+    backgroundColor: "#007AFF",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  scanStoreButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  placeholderImage: {
+    backgroundColor: "#f5f5f5",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  discountedPrice: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#000",
+  },
+  originalPrice: {
+    fontSize: 12,
+    color: "#666",
+    textDecorationLine: "line-through",
+  },
+  outOfStockBadge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    backgroundColor: "rgba(255, 59, 48, 0.9)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  outOfStockText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  productCount: {
+    fontSize: 14,
+    color: "#666",
+  },
+  noProductsContainer: {
+    alignItems: "center",
+    paddingVertical: 48,
+  },
+  noProductsText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#666",
+    marginTop: 16,
+  },
+  noProductsSubtext: {
+    fontSize: 14,
+    color: "#999",
+    marginTop: 8,
+    textAlign: "center",
   },
 });

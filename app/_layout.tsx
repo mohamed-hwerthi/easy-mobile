@@ -1,4 +1,3 @@
-// app/_layout.tsx
 import {
   DarkTheme,
   DefaultTheme,
@@ -18,25 +17,16 @@ export default function RootLayout() {
       <CartProvider>
         <SafeAreaView style={{ flex: 1 }}>
           <Stack screenOptions={{ headerShown: false }}>
-            {/* Store Scan Screen - First Screen */}
             <Stack.Screen name="index" />
-
-            {/* Main Tabs */}
             <Stack.Screen name="(tabs)" />
-
-            {/* Product Details */}
             <Stack.Screen name="product/[id]" />
-
-            {/* Checkout Screen */}
             <Stack.Screen name="checkout" />
-
-            {/* Modal */}
             <Stack.Screen
               name="modal"
               options={{
                 presentation: "modal",
                 title: "Modal",
-                headerShown: true, // Show header for modal if needed
+                headerShown: true,
               }}
             />
           </Stack>

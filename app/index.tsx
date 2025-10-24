@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -26,14 +27,18 @@ export default function StoreScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [cameraActive, setCameraActive] = useState(true);
 
-  // Request camera permission on mount
+  const saveStoreSlugToStorage = async (storeSlug: string) => {
+    try {
+      await AsyncStorage.setItem("storeSlug", storeSlug);
+    } catch (error) {}
+  };
+
   useEffect(() => {
     if (permission && !permission.granted) {
       requestPermission();
     }
   }, [permission]);
 
-  // Pulsing animation for the scan button
   React.useEffect(() => {
     if (!isScanning) {
       Animated.loop(
@@ -62,16 +67,6 @@ export default function StoreScanScreen() {
       setScanned(true);
       setIsScanning(false);
       setCameraActive(false);
-
-      // Console log the scanned value in real-time
-      console.log("📱 QR Code Scanned at:", new Date().toLocaleTimeString());
-      console.log("🔍 Scanned Data:", scanningResult.data);
-      console.log("📊 Scan Type:", scanningResult.type);
-      console.log(
-        "📋 Full Scan Result:",
-        JSON.stringify(scanningResult, null, 2)
-      );
-
       Alert.alert(
         "🎉 Store Connected!",
         `Store: ${scanningResult.data}\n\nYou can now browse their amazing products.`,
@@ -81,16 +76,12 @@ export default function StoreScanScreen() {
             onPress: () => {
               setScanned(false);
               setCameraActive(true);
-              console.log("🔄 Ready to scan again");
             },
           },
           {
             text: "Start Shopping",
             onPress: () => {
-              console.log(
-                "🚀 Navigating to store with data:",
-                scanningResult.data
-              );
+              saveStoreSlugToStorage(scanningResult.data);
               router.push("/(tabs)");
             },
           },
@@ -139,7 +130,6 @@ export default function StoreScanScreen() {
 
   const simulateQRScan = () => {
     const simulatedData = "store://techgadget-12345";
-    console.log("🧪 Simulated QR Scan:", simulatedData);
 
     Alert.alert(
       "🎉 Store Connected!",
@@ -148,7 +138,6 @@ export default function StoreScanScreen() {
         {
           text: "Start Shopping",
           onPress: () => {
-            console.log("🚀 Navigating with simulated data:", simulatedData);
             router.push("/(tabs)");
           },
         },
@@ -169,7 +158,6 @@ export default function StoreScanScreen() {
           text: "Connect Store",
           onPress: (code: any) => {
             if (code && code.length === 6) {
-              console.log("⌨️ Manual entry code:", code);
               Alert.alert(
                 "🎉 Store Connected!",
                 "Welcome to TechGadget Store. You can now browse their amazing products.",
@@ -177,7 +165,6 @@ export default function StoreScanScreen() {
                   {
                     text: "Start Shopping",
                     onPress: () => {
-                      console.log("🚀 Navigating with manual code:", code);
                       router.push("/(tabs)");
                     },
                   },
