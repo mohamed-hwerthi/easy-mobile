@@ -1,6 +1,7 @@
 "use client";
 
 import { API_UPLOADS_URL } from "@/config/api.config";
+import { ClientProduct } from "@/models/client-product-detail-model";
 import { ClientProductOption } from "@/models/ClientProductOption";
 import { ClientProductOptionGroup } from "@/models/ClientProductOptionGroup";
 import { ClientProductVariants } from "@/models/ClientProductVariants";
@@ -129,7 +130,9 @@ export default function ProductDetailsScreen() {
         const group = product.optionGroups?.find((g) =>
           g.options.some((opt: ClientProductOption) => opt.optionId === id)
         );
-        const option = group?.options.find((opt: ClientProductOption) => opt.optionId === id);
+        const option = group?.options.find(
+          (opt: ClientProductOption) => opt.optionId === id
+        );
         return group && option ? `${group.name}: ${option.optionName}` : null;
       })
       .filter(Boolean);
