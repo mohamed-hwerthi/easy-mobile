@@ -19,7 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useCart } from "../../context/CartContext";
+import { CartItem, CartOption, useCart } from "../../context/CartContext";
 
 const { width } = Dimensions.get("window");
 
@@ -115,41 +115,61 @@ export default function ProductDetailsScreen() {
   const handleAddToCart = () => {
     if (!product) return;
 
-    const variantDetails = Object.entries(selectedVariants)
-      .map(([groupId, optionId]) => {
-        const group = product.variants?.find((g) => g.variantName === groupId);
-        const option = group?.options.find((o) => o.variantId === optionId);
-        return group && option
-          ? `${group.variantName}: ${option.variantValue}`
-          : null;
-      })
-      .filter(Boolean);
+    const variantOptions: CartOption[] = [];
+    Object.entries(selectedVariants).forEach(([groupId, optionId]) => {
+      const variantGroup = product.variants?.find(
+        (g) => g.variantName === groupId
+      );
+      const option = variantGroup?.options.find(
+        (o) => o.variantId === optionId
+      );
+      if (option) {
+        variantOptions.push({
+          optionId: option.variantId,
+          optionName: `${variantGroup?.variantName}: ${option.variantValue}`,
+          optionPrice: option.variantPrice,
+        });
+      }
+    });
 
-    const supplementDetails = selectedSupplements
-      .map((id) => {
-        const group = product.optionGroups?.find((g) =>
-          g.options.some((opt: ClientProductOption) => opt.optionId === id)
-        );
-        const option = group?.options.find(
-          (opt: ClientProductOption) => opt.optionId === id
-        );
-        return group && option ? `${group.name}: ${option.optionName}` : null;
-      })
-      .filter(Boolean);
+    const supplementOptions: CartOption[] = [];
+    selectedSupplements.forEach((supplementId) => {
+      const group = product.optionGroups?.find((g) =>
+        g.options.some((opt) => opt.optionId === supplementId)
+      );
+      const option = group?.options.find(
+        (opt) => opt.optionId === supplementId
+      );
+      if (option) {
+        supplementOptions.push({
+          optionId: option.optionId,
+          optionName: `${group?.name}: ${option.optionName}`,
+          optionPrice: option.optionPrice,
+        });
+      }
+    });
 
-    const cartItem = {
-      id: `${product.id}-${Object.values(selectedVariants).join(
+    const allOptions = [...variantOptions, ...supplementOptions];
+
+    let basePrice = product.basePrice || 0;
+    variantOptions.forEach((option) => {
+      basePrice += option.optionPrice || 0;
+    });
+
+    const cartItem: Omit<CartItem, "itemTotalPrice"> = {
+      itemId: `${product.id}-${Object.values(selectedVariants).join(
         "-"
       )}-${selectedSupplements.join(",")}`,
-      productId: product.id,
-      name: product.title || "Unnamed Product",
-      price: calculateTotal() / quantity,
-      image: product.mediasUrls?.[0]
+      itemTitle: product.title || "Unnamed Product",
+      itemPrice: basePrice,
+      itemImage: product.mediasUrls?.[0]
         ? `${API_UPLOADS_URL}${product.mediasUrls[0]}`
         : "/placeholder.jpg",
-      quantity,
-      variants: variantDetails,
-      supplements: supplementDetails,
+      itemQuantity: quantity,
+      itemOptions: allOptions,
+      productId: product.id,
+      variants: Object.values(selectedVariants),
+      supplements: selectedSupplements,
     };
 
     addToCart(cartItem);
